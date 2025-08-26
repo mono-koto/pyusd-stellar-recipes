@@ -1,0 +1,46 @@
+{
+  "name": "pyusd-stellar-recipes",
+  "version": "1.0.0",
+  "description": "Quick, runnable examples for working with PYUSD on Stellar, including both Horizon and Soroban usage",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "check-balance": "tsx src/checkBalance.ts",
+    "send-pyusd": "tsx src/sendPyusd.ts",
+    "create-trustline": "tsx src/createTrustline.ts",
+    "dev": "tsx --watch",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "stellar",
+    "paypal",
+    "pyusd",
+    "typescript",
+    "cli",
+    "blockchain",
+    "stablecoin"
+  ],
+  "author": "Mono Koto",
+  "license": "MIT",
+  "dependencies": {
+    "@stellar/stellar-sdk": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.13",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
