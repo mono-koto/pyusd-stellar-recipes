@@ -59,24 +59,8 @@ cp .env.template .env
 # Edit .env with your actual values
 ```
 
-Or create a `.env` file manually with:
 
-```bash
-# Stellar Network Configuration
-STELLAR_NETWORK=testnet
-HORIZON_URL=https://horizon-testnet.stellar.org
-
-# Your Account
-PRIVATE_KEY=SXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-WALLET_ADDRESS=GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-# PYUSD Configuration (Testnet)
-PYUSD_ASSET_CODE=PYUSD
-PYUSD_ISSUER=GBT2KJDKUZYZTQPCSR57VZT5NJHI4H7FOB5LT5FPRWSR7I5B4FS3UU7G
-PYUSD_SAC_CONTRACT=CACZL3MGXXP3O6ROMB4Q36ROFULRWD6QARPE3AKWPSWMYZVF2474CBXP
-```
-
-> 🧐 **Another Security Note**: See how we put the private key in a `.env` file like that? Don't do that in production or with mainnet. Use a more secure approach like a [hardware wallet](https://www.ledger.com/), [keystore with secret](https://docs.stellar.org/build/smart-contracts/getting-started/storing-data), or other secure key management solutions.
+> 🧐 **Another Security Note**: You may notice we put a private key in a `.env` file? Don't do that with keys you need to use with mainnet.
 
 ## Getting Testnet Tokens
 
