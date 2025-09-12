@@ -16,16 +16,16 @@ async function main() {
       process.exit(1);
     }
     
-    const destinationAddress = args[0];
-    const amount = args[1];
+    const destinationAddress = args[0]!;
+    const amount = args[1]!;
     const memo = args[2];
     
     // Validate inputs
-    if (!destinationAddress.startsWith('G') || destinationAddress.length !== 56) {
+    if (!destinationAddress || !destinationAddress.startsWith('G') || destinationAddress.length !== 56) {
       throw new Error('Invalid destination address format');
     }
     
-    if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
       throw new Error('Invalid amount');
     }
     

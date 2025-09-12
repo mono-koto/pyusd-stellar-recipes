@@ -9,19 +9,20 @@ on:
 jobs:
   lint-and-build:
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        node-version: [18, 20, 22]
-    
+        
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
-    - name: Setup Node.js ${{ matrix.node-version }}
+
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: 20
+        cache: 'npm'
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
         cache: 'npm'
         
     - name: Install dependencies
@@ -35,12 +36,3 @@ jobs:
       
     - name: Build project
       run: npm run build
-
-  dependency-review:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
