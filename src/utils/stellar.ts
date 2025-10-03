@@ -7,22 +7,23 @@ import {
   BASE_FEE,
   Memo,
   Contract,
-  SorobanRpc,
+  rpc,
   scValToNative,
   nativeToScVal,
+  Address,
 } from '@stellar/stellar-sdk';
 import { Config } from './config.js';
 
 export class StellarClient {
   private horizonServer: Horizon.Server;
-  private sorobanServer: SorobanRpc.Server;
+  private sorobanServer: rpc.Server;
   private keypair: Keypair;
   private config: Config;
 
   constructor(config: Config) {
     this.config = config;
     this.horizonServer = new Horizon.Server(config.horizonUrl);
-    this.sorobanServer = new SorobanRpc.Server(config.sorobanUrl);
+    this.sorobanServer = new rpc.Server(config.sorobanUrl);
     this.keypair = Keypair.fromSecret(config.privateKey);
   }
 
@@ -73,11 +74,11 @@ export class StellarClient {
   async getPyusdBalanceSAC(): Promise<string> {
     try {
       const contract = new Contract(this.config.pyusdSacContract);
-
-      // Create the contract call
       const account = await this.horizonServer.loadAccount(
         this.keypair.publicKey()
       );
+
+      // Build the transaction to call the balance function
       const transaction = new TransactionBuilder(account, {
         fee: BASE_FEE,
         networkPassphrase: this.config.networkPassphrase,
@@ -85,7 +86,7 @@ export class StellarClient {
         .addOperation(
           contract.call(
             'balance',
-            nativeToScVal(this.config.walletAddress, { type: 'address' })
+            Address.fromString(this.config.walletAddress).toScVal()
           )
         )
         .setTimeout(30)
@@ -95,16 +96,20 @@ export class StellarClient {
       const response =
         await this.sorobanServer.simulateTransaction(transaction);
 
-      if (SorobanRpc.Api.isSimulationSuccess(response)) {
-        const result = response.result?.retval;
-        if (result) {
-          const balance = scValToNative(result);
+      if (rpc.Api.isSimulationSuccess(response)) {
+        if (response.result?.retval) {
+          // Use scValToNative to convert, it handles i128 properly
+          const balance = scValToNative(response.result.retval);
           // Convert from stroops to PYUSD (7 decimals)
           return (Number(balance) / 10000000).toFixed(7);
         }
       }
 
       // Enhanced error reporting for SAC failures
+      if (rpc.Api.isSimulationError(response)) {
+        const error = response.error;
+        throw new Error(`SAC simulation failed: ${error}`);
+      }
       throw new Error('SAC balance call failed - no result returned');
     } catch (error) {
       if (error instanceof Error) {
@@ -220,8 +225,8 @@ export class StellarClient {
         .addOperation(
           contract.call(
             'transfer',
-            nativeToScVal(this.config.walletAddress, { type: 'address' }),
-            nativeToScVal(destinationAddress, { type: 'address' }),
+            new Address(this.config.walletAddress).toScVal(),
+            new Address(destinationAddress).toScVal(),
             nativeToScVal(amountInStroops, { type: 'i128' })
           )
         )
@@ -232,12 +237,9 @@ export class StellarClient {
       const simResponse =
         await this.sorobanServer.simulateTransaction(transaction);
 
-      if (SorobanRpc.Api.isSimulationSuccess(simResponse)) {
+      if (rpc.Api.isSimulationSuccess(simResponse)) {
         // Prepare the transaction with the simulation result
-        transaction = SorobanRpc.assembleTransaction(
-          transaction,
-          simResponse
-        ).build();
+        transaction = rpc.assembleTransaction(transaction, simResponse).build();
       } else {
         throw new Error('Transaction simulation failed');
       }

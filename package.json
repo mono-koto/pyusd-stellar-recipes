@@ -27,15 +27,16 @@
   "author": "Mono Koto",
   "license": "MIT",
   "dependencies": {
-    "@stellar/stellar-sdk": "^12.1.0",
-    "dotenv": "^16.4.5",
+    "@stellar/stellar-sdk": "^14.2.0",
+    "dotenv": "^17.2.3",
     "zod": "^4.1.8"
   },
   "devDependencies": {
-    "@types/node": "^20.19.13",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.57.0",
+    "@eslint/js": "^9.36.0",
+    "@types/node": "^24.6.2",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "eslint": "^9.36.0",
     "prettier": "^3.2.5",
     "tsx": "^4.16.2",
     "typescript": "^5.5.4"
