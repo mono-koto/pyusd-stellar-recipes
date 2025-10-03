@@ -36,35 +36,31 @@ export class StellarClient {
         this.config.walletAddress
       );
 
-      // Find PYUSD balance in account balances
-      const pyusdBalance = account.balances.find(
+      const balanceResponse = account.balances.find(
         (balance) =>
           'asset_code' in balance &&
-          'asset_issuer' in balance &&
           balance.asset_code === this.config.pyusdAssetCode &&
+          'asset_issuer' in balance &&
           balance.asset_issuer === this.config.pyusdIssuer
       );
-
-      return pyusdBalance ? pyusdBalance.balance : '0';
+      return balanceResponse?.balance || '0';
     } catch (error) {
-      if (error instanceof Error) {
-        // Handle common network errors
-        if (error.message.includes('Request failed with status code 404')) {
-          throw new Error(
-            `Account not found. Make sure the account is funded and exists on ${this.config.network}`
-          );
-        }
-        if (
-          error.message.includes('ENOTFOUND') ||
-          error.message.includes('ECONNREFUSED')
-        ) {
-          throw new Error(
-            `Network error: Cannot connect to Horizon server at ${this.config.horizonUrl}`
-          );
-        }
-        throw new Error(`Failed to get classic balance: ${error.message}`);
+      if (!(error instanceof Error)) throw error;
+
+      if (error.message.includes('Request failed with status code 404')) {
+        throw new Error(
+          `Account not found. Make sure the account is funded and exists on ${this.config.network}`
+        );
       }
-      throw error;
+      if (
+        error.message.includes('ENOTFOUND') ||
+        error.message.includes('ECONNREFUSED')
+      ) {
+        throw new Error(
+          `Network error: Cannot connect to Horizon server at ${this.config.horizonUrl}`
+        );
+      }
+      throw new Error(`Failed to get classic balance: ${error.message}`);
     }
   }
 
@@ -78,7 +74,6 @@ export class StellarClient {
         this.keypair.publicKey()
       );
 
-      // Build the transaction to call the balance function
       const transaction = new TransactionBuilder(account, {
         fee: BASE_FEE,
         networkPassphrase: this.config.networkPassphrase,
@@ -92,44 +87,33 @@ export class StellarClient {
         .setTimeout(30)
         .build();
 
-      // Simulate the transaction using Soroban RPC
       const response =
         await this.sorobanServer.simulateTransaction(transaction);
 
-      if (rpc.Api.isSimulationSuccess(response)) {
-        if (response.result?.retval) {
-          // Use scValToNative to convert, it handles i128 properly
-          const balance = scValToNative(response.result.retval);
-          // Convert from stroops to PYUSD (7 decimals)
-          return (Number(balance) / 10000000).toFixed(7);
-        }
+      if (rpc.Api.isSimulationSuccess(response) && response.result?.retval) {
+        const balance = scValToNative(response.result.retval);
+        return (Number(balance) / 10000000).toFixed(7);
       }
 
-      // Enhanced error reporting for SAC failures
       if (rpc.Api.isSimulationError(response)) {
-        const error = response.error;
-        throw new Error(`SAC simulation failed: ${error}`);
+        throw new Error(`SAC simulation failed: ${response.error}`);
       }
       throw new Error('SAC balance call failed - no result returned');
     } catch (error) {
-      if (error instanceof Error) {
-        // Handle common Soroban errors
-        if (
-          error.message.includes('ENOTFOUND') ||
-          error.message.includes('ECONNREFUSED')
-        ) {
-          throw new Error(
-            `Network error: Cannot connect to Soroban RPC server`
-          );
-        }
-        if (error.message.includes('Contract not found')) {
-          throw new Error(
-            `SAC contract not found: ${this.config.pyusdSacContract}`
-          );
-        }
-        throw new Error(`Failed to get SAC balance: ${error.message}`);
+      if (!(error instanceof Error)) throw error;
+
+      if (
+        error.message.includes('ENOTFOUND') ||
+        error.message.includes('ECONNREFUSED')
+      ) {
+        throw new Error(`Network error: Cannot connect to Soroban RPC server`);
       }
-      throw error;
+      if (error.message.includes('Contract not found')) {
+        throw new Error(
+          `SAC contract not found: ${this.config.pyusdSacContract}`
+        );
+      }
+      throw new Error(`Failed to get SAC balance: ${error.message}`);
     }
   }
 
@@ -150,7 +134,7 @@ export class StellarClient {
         this.config.pyusdIssuer
       );
 
-      const transaction = new TransactionBuilder(account, {
+      const transactionBuilder = new TransactionBuilder(account, {
         fee: BASE_FEE,
         networkPassphrase: this.config.networkPassphrase,
       }).addOperation(
@@ -161,41 +145,36 @@ export class StellarClient {
         })
       );
 
-      // Add memo if provided
       if (memo) {
-        transaction.addMemo(Memo.text(memo));
+        transactionBuilder.addMemo(Memo.text(memo));
       }
 
-      const builtTransaction = transaction.setTimeout(30).build();
+      const builtTransaction = transactionBuilder.setTimeout(30).build();
 
-      // Sign and submit
       builtTransaction.sign(this.keypair);
       const response =
         await this.horizonServer.submitTransaction(builtTransaction);
-
       return response.hash;
     } catch (error) {
-      if (error instanceof Error) {
-        // Handle common transaction errors
-        if (error.message.includes('insufficient balance')) {
-          throw new Error(
-            `Insufficient balance. Check your XLM and PYUSD balances.`
-          );
-        }
-        if (error.message.includes('op_no_trust')) {
-          throw new Error(
-            `Destination account has no PYUSD trustline. They need to create one first.`
-          );
-        }
-        if (error.message.includes('op_underfunded')) {
-          throw new Error(`Insufficient PYUSD balance for this transaction.`);
-        }
-        if (error.message.includes('tx_bad_seq')) {
-          throw new Error(`Transaction sequence error. Please retry.`);
-        }
-        throw new Error(`Failed to send PYUSD (classic): ${error.message}`);
+      if (!(error instanceof Error)) throw error;
+
+      if (error.message.includes('insufficient balance')) {
+        throw new Error(
+          `Insufficient balance. Check your XLM and PYUSD balances.`
+        );
       }
-      throw error;
+      if (error.message.includes('op_no_trust')) {
+        throw new Error(
+          `Destination account has no PYUSD trustline. They need to create one first.`
+        );
+      }
+      if (error.message.includes('op_underfunded')) {
+        throw new Error(`Insufficient PYUSD balance for this transaction.`);
+      }
+      if (error.message.includes('tx_bad_seq')) {
+        throw new Error(`Transaction sequence error. Please retry.`);
+      }
+      throw new Error(`Failed to send PYUSD (classic): ${error.message}`);
     }
   }
 
@@ -212,12 +191,10 @@ export class StellarClient {
         this.keypair.publicKey()
       );
 
-      // Convert amount to stroops (7 decimals)
       const amountInStroops = Math.floor(
         parseFloat(amount) * 10000000
       ).toString();
 
-      // Build the transaction
       let transaction = new TransactionBuilder(account, {
         fee: BASE_FEE,
         networkPassphrase: this.config.networkPassphrase,
@@ -233,29 +210,21 @@ export class StellarClient {
         .setTimeout(30)
         .build();
 
-      // Simulate the transaction first to prepare it
       const simResponse =
         await this.sorobanServer.simulateTransaction(transaction);
 
-      if (rpc.Api.isSimulationSuccess(simResponse)) {
-        // Prepare the transaction with the simulation result
-        transaction = rpc.assembleTransaction(transaction, simResponse).build();
-      } else {
+      if (!rpc.Api.isSimulationSuccess(simResponse)) {
         throw new Error('Transaction simulation failed');
       }
 
-      // Sign the transaction
+      transaction = rpc.assembleTransaction(transaction, simResponse).build();
       transaction.sign(this.keypair);
 
-      // Submit to Soroban network
       const response = await this.sorobanServer.sendTransaction(transaction);
-
       return response.hash;
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`Failed to send PYUSD (SAC): ${error.message}`);
-      }
-      throw error;
+      if (!(error instanceof Error)) throw error;
+      throw new Error(`Failed to send PYUSD (SAC): ${error.message}`);
     }
   }
 
@@ -268,25 +237,20 @@ export class StellarClient {
         this.config.walletAddress
       );
 
-      const hasTrustline = account.balances.some(
+      return account.balances.some(
         (balance) =>
           'asset_code' in balance &&
-          'asset_issuer' in balance &&
           balance.asset_code === this.config.pyusdAssetCode &&
+          'asset_issuer' in balance &&
           balance.asset_issuer === this.config.pyusdIssuer
       );
-
-      return hasTrustline;
     } catch (error) {
-      // Log the error for debugging but don't throw
       if (
         error instanceof Error &&
         error.message.includes('Request failed with status code 404')
       ) {
-        // Account doesn't exist, so no trustline
         return false;
       }
-      // For other errors, assume no trustline to be safe
       return false;
     }
   }
@@ -314,13 +278,10 @@ export class StellarClient {
 
       transaction.sign(this.keypair);
       const response = await this.horizonServer.submitTransaction(transaction);
-
       return response.hash;
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`Failed to create trustline: ${error.message}`);
-      }
-      throw error;
+      if (!(error instanceof Error)) throw error;
+      throw new Error(`Failed to create trustline: ${error.message}`);
     }
   }
 }
